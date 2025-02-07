@@ -17,50 +17,45 @@ class PairwiseSeqAligner:
         """
         Initializes the matrix with gap penalties.
         """
-        values = []
+        table = []
 
         # We create +1 column and +1 row because the 1x1 cell of the table
         # must contain 0 according to the algorithm
         for i in range(len(self.seq2)+1):
             # Create a row
-            values.append([])
+            table.append([])
             for j in range(len(self.seq1)+1):
                 # Create a column
                 # If it is the first column, we assign gap penalties
                 if i == 0:
-                    values[i].append(j * self.gap)
+                    table[i].append((j * self.gap, ''))
                 else:
                     # If it is the first row, we assign gap penalties
                     if j == 0:
-                        values[i].append(i * self.gap)
+                        table[i].append((i * self.gap, ''))
                     else:
-                        values[i].append(0)
+                        table[i].append((0, ''))
 
-        return values
+        return table
 
 
-    def _table_filling(self, values):
+    def _table_filling(self, table):
         """
         Fills the table using the Needleman-Wunsch recurrence relation.
         """
-        rows, cols = len(values), len(values[0])
-
-        # Create traceback direction matrix
-        directions = [[""] * cols for _ in range(rows)]
-
         for i in range(1, len(self.seq2)+1):
             for j in range(1, len(self.seq1)+1):
                 # Select max score and assign direction
-                values[i][j], directions[i][j] = max(
-                    (values[i - 1][j - 1] + self.matrix[self.seq2[i - 1], self.seq1[j - 1]], 'd'),  # Diagonal (match/mismatch)
-                    (values[i - 1][j] + self.gap, 't'),     # Top (gap in seq1)
-                    (values[i][j - 1] + self.gap, 'l')      # Left (gap in seq2)
+                table[i][j] = max(
+                    (table[i - 1][j - 1][0] + self.matrix[self.seq2[i - 1], self.seq1[j - 1]], 'd'),  # Diagonal (match/mismatch)
+                    (table[i - 1][j][0] + self.gap, 't'),     # Top (gap in seq1)
+                    (table[i][j - 1][0] + self.gap, 'l')      # Left (gap in seq2)
                 )
 
-        return values, directions
+        return table
 
 
-    def _traceback(self, values, directions):
+    def _traceback(self, table):
         """
         Traces back from the bottom-right of the DP table to reconstruct alignment.
         """
@@ -70,12 +65,12 @@ class PairwiseSeqAligner:
         i, j = len(self.seq2), len(self.seq1)  # Start from bottom-right
 
         while i > 0 or j > 0:
-            if directions[i][j] == 'd':  # Diagonal (match/mismatch)
+            if table[i][j][-1] == 'd':  # Diagonal (match/mismatch)
                 aln1 = self.seq1[j - 1] + aln1
                 aln2 = self.seq2[i - 1] + aln2
                 i -= 1
                 j -= 1
-            elif directions[i][j] == 't':  # Up (gap in seq1)
+            elif table[i][j][-1] == 't':  # Up (gap in seq1)
                 aln1 = "-" + aln1
                 aln2 = self.seq2[i - 1] + aln2
                 i -= 1
@@ -84,21 +79,21 @@ class PairwiseSeqAligner:
                 aln2 = "-" + aln2
                 j -= 1
 
-        return aln1, aln2, values[-1][-1]
+        return aln1, aln2, table[-1][-1][0]
 
 
     def needleman_wunsch(self):
         """
-        Traces back from the bottom-right of the DP table to reconstruct alignment.
+        Needleman-Wunsch algorithm for global alignment
         """
-        values = self._initialization()
-        values, directions = self._table_filling(values)
-        return self._traceback(values, directions)
+        table = self._initialization()
+        table = self._table_filling(table)
+        return self._traceback(table)
 
 if __name__ == "__main__":
     aligner = PairwiseSeqAligner(
-        "TGGGGGG",
-        "TAGGTTAGG",
+        "ATGTCCCGTAATA",
+        "ATGTCGTAATATGC",
         substitution_matrix.SubstitutionMatrix("matrices/TTM.txt"),
         -2,
     )
