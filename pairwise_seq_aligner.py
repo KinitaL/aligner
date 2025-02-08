@@ -1,7 +1,6 @@
 import substitution_matrix
 
 class PairwiseSeqAligner:
-    # TODO: add description for both algorithm and stress main differences between them (aim, workflow, output etc.)
     """
     PairSeqAligner is a pairwise sequence aligner that implement
         - Needleman-Wunsch algorithm for global alignment
