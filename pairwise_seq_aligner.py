@@ -42,7 +42,7 @@ class PairwiseSeqAligner:
 
     def _table_filling(self, table, modifier, is_sw):
         """
-        Fills the table using the Needleman-Wunsch recurrence relation.
+        Fills the table using the recurrence relation.
         """
         for i in range(1, len(self.seq2)+1):
             for j in range(1, len(self.seq1)+1):
@@ -88,7 +88,32 @@ class PairwiseSeqAligner:
 
     def needleman_wunsch(self):
         """
-        Needleman-Wunsch algorithm for global alignment
+        Needleman-Wunsch algorithm for global alignment:
+
+        1. Initialization
+            In this step a table is produced.
+            The rows of the table represent characters of the second sequence.
+            The columns of the table represent characters of the first sequence.
+            The 0x0 element is always a zero because according to the algorithm
+            the first character of the second sequence is represented by the second row
+            and first character of the first sequence is represented by the second column.
+            Also, the gap penalties are assigned for all elements of the first row and all elements of the first column.
+        2. Table filling
+            In this step the table is filled with values and directions for tracing back.
+            We iterate over elements and assign a value by choosing a maximum of following options:
+                - The value of previous diagonal element + match/mismatch score (taken from a matrix)
+                - The value of the element from the left + gap penalty
+                - The value of the element from the top + gap penalty
+            The last element is the maximum value
+        3. Traceback
+            In this step we collect the alignments by tracing back the table.
+            We start from the last element and use directions to go over elements to the first elements:
+                - If a value has the diagonal direction, we know that we should go to the previous diagonal element and add to our alignments
+                    the characters corresponding to the previous diagonal element.
+                - If a value has the left direction, we go to the left, add to the first alignment the character corresponding
+                    to the previous left element and add to the second alignment the gap character.
+                - If a value has the top direction, we go to the top, add to the second alignment the character corresponding
+                    to the previous left element and add to the first alignment the gap character.
         """
         modifier = lambda a: a
         table = self._initialization(modifier)
@@ -98,7 +123,41 @@ class PairwiseSeqAligner:
 
     def smith_waterman(self):
         """
-        Smith-Waterman algorithm for local alignment
+        Smith-Waterman algorithm for local alignment:
+
+        1. Initialization
+            In this step a table is produced.
+            The rows of the table represent characters of the second sequence.
+            The columns of the table represent characters of the first sequence.
+            The 0x0 element is always a zero because according to the algorithm
+            the first character of the second sequence is represented by the second row
+            and first character of the first sequence is represented by the second column.
+            The gap penalties are not assigned because according to the algorithm the minimum score is zero,
+            so, we just assign zero to all elements of the first row and all elements of the first column.
+        2. Table filling
+            In this step the table is filled with values and directions for tracing back.
+            We iterate over elements and assign a value by choosing a maximum of following options:
+                - The value of previous diagonal element + match/mismatch score (taken from a matrix)
+                - The value of the element from the left + gap penalty
+                - The value of the element from the top + gap penalty
+            In case of parity in we should override direction to '' that means that local alignment is over here.
+            The last element is the maximum value
+        3. Traceback
+            In this step we collect the alignments by tracing back the table.
+            First of all we iterate over the table to find the element with the maximum score.
+            We start from this and use directions to go over elements until we encounter zero direction (''):
+                - If a value has the diagonal direction, we know that we should go to the previous diagonal element and add to our alignments
+                    the characters corresponding to the previous diagonal element.
+                - If a value has the left direction, we go to the left, add to the first alignment the character corresponding
+                    to the previous left element and add to the second alignment the gap character.
+                - If a value has the top direction, we go to the top, add to the second alignment the character corresponding
+                    to the previous left element and add to the first alignment the gap character.
+
+        Differences with NW algorithm:
+            - The positive constraint: all values must be >= 0
+            - A direction might be '' meaning that local alignment is over here
+            - We start collect alignments from the element with the maximum score and finish when we encounter zero direction ('')
+            - Output is not required to contain whole sequences, it contains the best local alignments
         """
         modifier = lambda a: 0 if a<0 else a
         table = self._initialization(modifier)
