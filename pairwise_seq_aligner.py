@@ -7,11 +7,17 @@ class PairwiseSeqAligner:
         - Smith-Waterman algorithm for local alignment
     """
     def __init__(self, seq1, seq2, matrix, gap):
-        self.seq1 = seq1
-        self.seq2 = seq2
-        self.matrix = matrix
-        self.gap = gap
+        self._seq1 = seq1
+        self._seq2 = seq2
+        self._matrix = matrix
+        self._gap = gap
 
+    def __str__(self):
+        return ("Instance of PairSeqAligner:\n"
+                "First sequence is {0}\n"
+                "Second sequence is {1}\n"
+                "Gap is {2}"
+                .format(self._seq1, self._seq2, self._gap))
 
     def _initialization(self, modifier):
         """
@@ -21,18 +27,18 @@ class PairwiseSeqAligner:
 
         # We create +1 column and +1 row because the 1x1 cell of the table
         # must contain 0 according to the algorithm
-        for i in range(len(self.seq2)+1):
+        for i in range(len(self._seq2)+1):
             # Create a row
             table.append([])
-            for j in range(len(self.seq1)+1):
+            for j in range(len(self._seq1)+1):
                 # Create a column
                 # If it is the first column, we assign gap penalties
                 if i == 0:
-                    table[i].append((modifier(j * self.gap), ''))
+                    table[i].append((modifier(j * self._gap), ''))
                 else:
                     # If it is the first row, we assign gap penalties
                     if j == 0:
-                        table[i].append((modifier(i * self.gap), ''))
+                        table[i].append((modifier(i * self._gap), ''))
                     else:
                         table[i].append((modifier(0), ''))
 
@@ -43,13 +49,13 @@ class PairwiseSeqAligner:
         """
         Fills the table using the recurrence relation.
         """
-        for i in range(1, len(self.seq2)+1):
-            for j in range(1, len(self.seq1)+1):
+        for i in range(1, len(self._seq2)+1):
+            for j in range(1, len(self._seq1)+1):
                 # Select max score and assign direction
                 value = max(
-                    (modifier(table[i - 1][j - 1][0] + self.matrix[self.seq2[i - 1], self.seq1[j - 1]]), 'd'),  # Diagonal (match/mismatch)
-                    (modifier(table[i - 1][j][0] + self.gap), 't'),     # Top (gap in seq1)
-                    (modifier(table[i][j - 1][0] + self.gap), 'l')     # Left (gap in seq2)
+                    (modifier(table[i - 1][j - 1][0] + self._matrix[self._seq2[i - 1], self._seq1[j - 1]]), 'd'),  # Diagonal (match/mismatch)
+                    (modifier(table[i - 1][j][0] + self._gap), 't'),     # Top (gap in seq1)
+                    (modifier(table[i][j - 1][0] + self._gap), 'l')     # Left (gap in seq2)
                 )
                 # In case of parity in local alignment we should override direction to ''
                 if is_sw and value[0] == 0:
@@ -69,16 +75,16 @@ class PairwiseSeqAligner:
 
         while condition(table, i, j):
             if table[i][j][-1] == 'd':  # Diagonal (match/mismatch)
-                aln1 = self.seq1[j - 1] + aln1
-                aln2 = self.seq2[i - 1] + aln2
+                aln1 = self._seq1[j - 1] + aln1
+                aln2 = self._seq2[i - 1] + aln2
                 i -= 1
                 j -= 1
             elif table[i][j][-1] == 't':  # Up (gap in seq1)
                 aln1 = "-" + aln1
-                aln2 = self.seq2[i - 1] + aln2
+                aln2 = self._seq2[i - 1] + aln2
                 i -= 1
             else:  # Left (gap in seq2)
-                aln1 = self.seq1[j - 1] + aln1
+                aln1 = self._seq1[j - 1] + aln1
                 aln2 = "-" + aln2
                 j -= 1
 
@@ -118,7 +124,7 @@ class PairwiseSeqAligner:
         table = self._initialization(modifier)
         table = self._table_filling(table, modifier, False)
         condition = lambda t,a,b: True if a > 0 or b > 0 else False
-        return self._traceback(table, len(self.seq2), len(self.seq1), table[-1][-1][0], condition)
+        return self._traceback(table, len(self._seq2), len(self._seq1), table[-1][-1][0], condition)
 
     def smith_waterman(self):
         """
@@ -162,8 +168,8 @@ class PairwiseSeqAligner:
         table = self._initialization(modifier)
         table = self._table_filling(table, modifier, True)
         max_score = -1
-        for i in range(len(self.seq2) + 1):
-            for j in range(len(self.seq1) + 1):
+        for i in range(len(self._seq2) + 1):
+            for j in range(len(self._seq1) + 1):
                 if table[i][j][0] > max_score:
                     max_score = table[i][j][0]
                     start_i = i
@@ -181,6 +187,7 @@ if __name__ == "__main__":
         substitution_matrix.SubstitutionMatrix("matrices/TTM.txt"),
         -2,
     )
+    print(aligner)
     aln1, aln2, score = aligner.needleman_wunsch()
     print("GLOBAL\nAlignment 1: {0}, \nAlignment 2: {1}, \nScore: {2}".format(aln1, aln2, score))
     aln1, aln2, score = aligner.smith_waterman()
